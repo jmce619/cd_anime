@@ -33,7 +33,6 @@ st.set_page_config(page_title="Districts Slideshow", layout="wide")
 
 # Initialize OpenAI client
 openai.api_key = st.secrets.openai.api_key
-
 def load_shapefile(district_n, parent_dir='./early_shapefiles'):
     """
     Load a single shapefile for the specified district number.
@@ -78,6 +77,14 @@ def create_mapping_dataframe():
             '16th', '17th', '18th', '19th', '20th',
             '21st', '22nd', '23rd', '24th', '25th'
         ],
+        'order': [
+            '1st', '2nd', '3rd', '4th', '5th',
+            '6th', '7th', '8th', '9th', '10th',
+            '11th', '12th', '13th', '14th', '15th',
+            '16th', '17th', '18th', '19th', '20th',
+            '21st', '22nd', '23rd', '24th', '25th'
+        ],
+        'order_num': list(range(1, 26)),
         'date_range': [
             'March 4, 1789 to March 3, 1791',
             'March 4, 1791 to March 2, 1793',
@@ -149,8 +156,8 @@ def get_historical_fact(district_n, start_date, end_date, refresh_count):
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": f"Provide an interesting historical fact about the United States that happened between {date_str}."}
             ],
-            temperature=0.7,
-            max_tokens=75
+            temperature=0.7
+            
         )
         fact = response.choices[0].message.content.strip()
     except Exception as e:
@@ -211,8 +218,8 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
     """
     placeholder = st.empty()
 
-    # Get districts ordered by their session order
-    ordered_districts = district_dates.sort_values('order')['district_n'].tolist()
+    # Sort districts numerically based on 'order_num'
+    ordered_districts = district_dates.sort_values('order_num')['district_n'].tolist()
 
     for district_n in ordered_districts:
         with placeholder.container():
@@ -224,7 +231,7 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
                 district_gdf = load_shapefile(district_n)
 
             # Display the load message
-       
+
             if district_gdf is not None:
                 # Fetch the mapping data for the current district
                 mapping_row = district_dates[district_dates['district_n'] == district_n].iloc[0]
@@ -245,6 +252,7 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
 
             # Wait for the specified interval before moving to the next slide
             time.sleep(interval)
+
 
 
 # -------------- Main Function --------------
