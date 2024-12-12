@@ -1,11 +1,8 @@
 # streamlit_app.py
 import streamlit as st
-from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 import matplotlib.pyplot as plt
-import tempfile
-import os
 import openai
 import time
 from shapely.geometry import Polygon, MultiPolygon
