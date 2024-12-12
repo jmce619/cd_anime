@@ -29,7 +29,7 @@ def set_custom_style():
 st.set_page_config(page_title="Districts Slideshow", layout="wide")
 
 # Title of the app
-st.title("Districts Slideshow")
+
 
 # Initialize OpenAI client
 openai.api_key = st.secrets.openai.api_key
@@ -266,7 +266,7 @@ def main():
     )
 
     # Slider to set slideshow interval
-    interval = st.slider("Set Slideshow Interval (seconds)", min_value=1, max_value=10, value=3)
+    interval = st.slider("Slow Down Animation", min_value=1, max_value=10, value=1)
 
     # Button to rerun animation and refresh historical facts
     if st.button("🔄 Rerun Animation"):
