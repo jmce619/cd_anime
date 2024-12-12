@@ -32,7 +32,7 @@ st.set_page_config(page_title="Districts Slideshow", layout="wide")
 
 
 # Initialize OpenAI client
-openai.api_key = api_key = "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"
+openai.api_key = st.secrets.openai.api_key
 
 def load_shapefile(district_n, parent_dir='./early_shapefiles'):
     """
@@ -55,13 +55,13 @@ def load_shapefile(district_n, parent_dir='./early_shapefiles'):
             gdf = gpd.read_file(shapefile_path)
             gdf['district_n'] = district_n  # Ensure consistent column naming
            
-            return gdf, message
+            return gdf
         except Exception as e:
             
-            return None, message
+            return None
     else:
 
-        return None, message
+        return None
 
 
 @st.cache_data
@@ -221,11 +221,10 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
 
             with st.spinner(f"Loading District {district_n}..."):
                 # Load the shapefile for the current district
-                district_gdf, load_message = load_shapefile(district_n)
+                district_gdf = load_shapefile(district_n)
 
             # Display the load message
-            container.markdown(load_message)
-
+       
             if district_gdf is not None:
                 # Fetch the mapping data for the current district
                 mapping_row = district_dates[district_dates['district_n'] == district_n].iloc[0]
@@ -274,10 +273,10 @@ def main():
 
     # Slider to set slideshow interval
 
+    interval = st.slider("", min_value=0, max_value=10, value=0)
 
     # Display the automatic slideshow with current refresh_count
     display_slideshow_auto(district_dates, interval, refresh_count=st.session_state.refresh_count)
-    interval = st.slider("", min_value=0, max_value=10, value=0)
 
     # Button to rerun animation and refresh historical facts
     if st.button("🔄 Rerun Animation"):
