@@ -32,7 +32,7 @@ st.set_page_config(page_title="Districts Slideshow", layout="wide")
 
 
 # Initialize OpenAI client
-openai.api_key = st.secrets.openai.api_key
+openai.api_key = api_key = "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"
 
 def load_shapefile(district_n, parent_dir='./early_shapefiles'):
     """
@@ -44,6 +44,7 @@ def load_shapefile(district_n, parent_dir='./early_shapefiles'):
 
     Returns:
     - gdf (GeoDataFrame): The GeoDataFrame of the loaded shapefile, or None if loading fails.
+    - message (str): Success or error message related to loading the shapefile.
     """
     parent_dir = Path(parent_dir)
     district_folder = parent_dir / f"districts{district_n}" / "districtShapes"
@@ -53,14 +54,15 @@ def load_shapefile(district_n, parent_dir='./early_shapefiles'):
         try:
             gdf = gpd.read_file(shapefile_path)
             gdf['district_n'] = district_n  # Ensure consistent column naming
-            st.write(f"Successfully loaded {shapefile_path}")
-            return gdf
+           
+            return gdf, message
         except Exception as e:
-            st.error(f"Error reading {shapefile_path}: {e}")
-            return None
+            
+            return None, message
     else:
-        st.error(f"Shapefile not found: {shapefile_path}")
-        return None
+
+        return None, message
+
 
 @st.cache_data
 def create_mapping_dataframe():
@@ -198,7 +200,7 @@ def plot_district(order, geometries, fact):
 
 # -------------- Slideshow Display Function --------------
 
-def display_slideshow_auto(district_dates, interval=1, refresh_count=0):
+def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
     """
     Displays a slideshow of congressional sessions with automatic transitions.
 
@@ -213,33 +215,38 @@ def display_slideshow_auto(district_dates, interval=1, refresh_count=0):
     ordered_districts = district_dates.sort_values('order')['district_n'].tolist()
 
     for district_n in ordered_districts:
-        with st.spinner(f"Loading District {district_n}..."):
-            # Load the shapefile for the current district
-            district_gdf = load_shapefile(district_n)
-
-        if district_gdf is None:
-            continue  # Skip to the next district if loading failed
-
-        # Fetch the mapping data for the current district
-        mapping_row = district_dates[district_dates['district_n'] == district_n].iloc[0]
-        order = mapping_row['order']
-        start_date = mapping_row['start_date']
-        end_date = mapping_row['end_date']
-
-        # Fetch the historical fact
-        fact = get_historical_fact(district_n, start_date, end_date, refresh_count)
-
-        # Generate the plot
-        fig = plot_district(order, district_gdf['geometry'].tolist(), fact)
-
-        # Display the plot
         with placeholder.container():
-            st.pyplot(fig)
+            # Initialize a container to hold all dynamic content
+            container = st.container()
 
-        plt.close(fig)  # Close the figure to free memory
+            with st.spinner(f"Loading District {district_n}..."):
+                # Load the shapefile for the current district
+                district_gdf, load_message = load_shapefile(district_n)
 
-        # Wait for the specified interval before moving to the next slide
-        time.sleep(interval)
+            # Display the load message
+            container.markdown(load_message)
+
+            if district_gdf is not None:
+                # Fetch the mapping data for the current district
+                mapping_row = district_dates[district_dates['district_n'] == district_n].iloc[0]
+                order = mapping_row['order']
+                start_date = mapping_row['start_date']
+                end_date = mapping_row['end_date']
+
+                # Fetch the historical fact
+                fact = get_historical_fact(district_n, start_date, end_date, refresh_count)
+
+                # Generate the plot
+                fig = plot_district(order, district_gdf['geometry'].tolist(), fact)
+
+                # Display the plot
+                container.pyplot(fig)
+
+                plt.close(fig)  # Close the figure to free memory
+
+            # Wait for the specified interval before moving to the next slide
+            time.sleep(interval)
+
 
 # -------------- Main Function --------------
 
@@ -266,16 +273,16 @@ def main():
     )
 
     # Slider to set slideshow interval
-    interval = st.slider("Slow Down Animation", min_value=1, max_value=10, value=1)
+
+
+    # Display the automatic slideshow with current refresh_count
+    display_slideshow_auto(district_dates, interval, refresh_count=st.session_state.refresh_count)
+    interval = st.slider("", min_value=0, max_value=10, value=0)
 
     # Button to rerun animation and refresh historical facts
     if st.button("🔄 Rerun Animation"):
         st.session_state.refresh_count += 1
         st.experimental_rerun()  # Rerun the app to restart the slideshow
-
-    # Display the automatic slideshow with current refresh_count
-    display_slideshow_auto(district_dates, interval, refresh_count=st.session_state.refresh_count)
-
     # Optionally, provide a download option for historical facts
     # (Implementation depends on how facts are stored; omitted for brevity)
 
