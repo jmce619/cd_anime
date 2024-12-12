@@ -31,7 +31,7 @@ st.set_page_config(page_title="Districts Slideshow", layout="wide")
 # Title of the app
 
 # Initialize OpenAI client
-openai.api_key = st.secrets["openai"]["api_key"]
+openai.api_key = st.secrets["api_key"]
 
 def load_and_combine_shapefiles(parent_dir='./'):
     combined_gdf = gpd.read_file("./unioned_districts.shp")
