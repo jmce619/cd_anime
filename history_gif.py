@@ -1,4 +1,3 @@
-# streamlit_app.py
 import streamlit as st
 import geopandas as gpd
 import pandas as pd
@@ -6,6 +5,7 @@ import matplotlib.pyplot as plt
 import openai
 import time
 from shapely.geometry import Polygon, MultiPolygon
+from pathlib import Path  # Added missing import
 
 def set_custom_style():
     """
@@ -20,26 +20,53 @@ def set_custom_style():
             background-color: #FFFFFF;
         }
 
-        
-
         </style>
         """,
         unsafe_allow_html=True
     )
+
 # Set the page configuration
 st.set_page_config(page_title="Districts Slideshow", layout="wide")
+
 # Title of the app
+st.title("Districts Slideshow")
 
 # Initialize OpenAI client
 openai.api_key = st.secrets.openai.api_key
 
-def load_and_combine_shapefiles(parent_dir='./'):
-    combined_gdf = gpd.read_file("./unioned_districts.shp")
-    return combined_gdf
+def load_shapefile(district_n, parent_dir='./early_shapefiles'):
+    """
+    Load a single shapefile for the specified district number.
 
+    Parameters:
+    - district_n (str): The three-digit district number (e.g., "001").
+    - parent_dir (str or Path): The parent directory containing shapefiles.
+
+    Returns:
+    - gdf (GeoDataFrame): The GeoDataFrame of the loaded shapefile, or None if loading fails.
+    """
+    parent_dir = Path(parent_dir)
+    district_folder = parent_dir / f"districts{district_n}" / "districtShapes"
+    shapefile_path = district_folder / f"districts{district_n}.shp"
+
+    if shapefile_path.exists():
+        try:
+            gdf = gpd.read_file(shapefile_path)
+            gdf['district_n'] = district_n  # Ensure consistent column naming
+            st.write(f"Successfully loaded {shapefile_path}")
+            return gdf
+        except Exception as e:
+            st.error(f"Error reading {shapefile_path}: {e}")
+            return None
+    else:
+        st.error(f"Shapefile not found: {shapefile_path}")
+        return None
 
 @st.cache_data
 def create_mapping_dataframe():
+    """
+    Create a mapping DataFrame that links each district to its congressional session and date range.
+    """
     district_dates = pd.DataFrame({
         'district_n': [f"{i:03}" for i in range(1, 26)],
         'order': [
@@ -80,15 +107,20 @@ def create_mapping_dataframe():
     return district_dates
 
 @st.cache_data
-def merge_data(_combined_gdf, district_dates):
-    merged_gdf = _combined_gdf.merge(district_dates, on='district_n', how='left')
-  
-    # Split the 'date_range' into 'start_date' and 'end_date'
-    merged_gdf[['start_date', 'end_date']] = merged_gdf['date_range'].str.split(' to ', expand=True)
-    
-    # Converthe date strings to datetime objects
+def process_date_ranges(district_dates):
+    """
+    Process the 'date_range' column into separate 'start_date' and 'end_date' datetime columns.
 
-    return merged_gdf
+    Parameters:
+    - district_dates (DataFrame): The mapping DataFrame with 'date_range' column.
+
+    Returns:
+    - district_dates (DataFrame): Updated DataFrame with 'start_date' and 'end_date' columns.
+    """
+    district_dates[['start_date', 'end_date']] = district_dates['date_range'].str.split(' to ', expand=True)
+    district_dates['start_date'] = pd.to_datetime(district_dates['start_date'])
+    district_dates['end_date'] = pd.to_datetime(district_dates['end_date'])
+    return district_dates
 
 # -------------- Historical Facts Caching Function --------------
 
@@ -97,8 +129,17 @@ def get_historical_fact(district_n, start_date, end_date, refresh_count):
     """
     Fetches an interesting historical fact for the given district's date range.
     Caches the result to minimize API calls unless a refresh is triggered.
+
+    Parameters:
+    - district_n (str): The three-digit district number.
+    - start_date (Timestamp): The start date of the congressional session.
+    - end_date (Timestamp): The end date of the congressional session.
+    - refresh_count (int): A counter to manage cache invalidation.
+
+    Returns:
+    - fact (str): The fetched historical fact.
     """
-    date_str = f"{start_date} to {end_date}"
+    date_str = f"{start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
@@ -113,7 +154,7 @@ def get_historical_fact(district_n, start_date, end_date, refresh_count):
     except Exception as e:
         fact = "Historical fact not available."
         st.error(f"Error fetching data from OpenAI for District {district_n}: {e}")
-    
+
     return fact
 
 # -------------- Plotting Function --------------
@@ -121,18 +162,18 @@ def get_historical_fact(district_n, start_date, end_date, refresh_count):
 def plot_district(order, geometries, fact):
     """
     Generates a Matplotlib figure for the given congressional session with all its geometries.
-    
+
     Parameters:
     - order (str): The order of the congressional session (e.g., "1st").
-    - geometries (GeoSeries or list): The geometries of the session.
+    - geometries (list): A list of geometries (Polygons or MultiPolygons) for the session.
     - fact (str): The historical fact to display.
-    
+
     Returns:
     - fig: The Matplotlib figure object.
     """
     fig, ax = plt.subplots(figsize=(8, 8))
-    
-    # Ensure geometries are in a GeoSeries for plotting
+
+    # Convert geometries to GeoSeries for plotting
     if isinstance(geometries, list):
         geometries = gpd.GeoSeries(geometries)
     elif isinstance(geometries, (Polygon, MultiPolygon)):
@@ -140,151 +181,103 @@ def plot_district(order, geometries, fact):
     elif isinstance(geometries, gpd.GeoSeries):
         pass  # Already a GeoSeries
     else:
+        st.warning("Invalid geometry type provided.")
         return fig  # Return empty figure
-    
+
     # Plot all geometries for the congressional session
     geometries.plot(ax=ax, color='skyblue', edgecolor='black')
-    
+
     # Set the title and remove axes
     ax.set_title(f"{order} Congressional Session", fontsize=16)
     ax.axis('off')
-    
+
     # Add the historical fact as text at the bottom
     plt.figtext(0.5, 0.02, fact, wrap=True, horizontalalignment='center', fontsize=12)
-    
+
     return fig
 
-# -------------- Slideshow Display Functions --------------
+# -------------- Slideshow Display Function --------------
 
-def display_slideshow_auto(merged_gdf, interval=0, refresh_count=0):
+def display_slideshow_auto(district_dates, interval=1, refresh_count=0):
     """
     Displays a slideshow of congressional sessions with automatic transitions.
-    
+
     Parameters:
-    - merged_gdf (GeoDataFrame): The merged GeoDataFrame containing session data.
+    - district_dates (DataFrame): The mapping DataFrame containing session data.
     - interval (int): Time in seconds each session is displayed.
     - refresh_count (int): Counter to control caching of historical facts.
     """
     placeholder = st.empty()
-    
-    # Get unique session orders in desired order
-    unique_sessions = merged_gdf['district_n'].unique()
-    
-    for district_n in unique_sessions:
-        # Filter all geometries for the current session
-        session_gdf = merged_gdf[merged_gdf['district_n'] == district_n]
-        geometries = session_gdf['geometry'].tolist()
-        
-        # Extract the order (e.g., "1st")
-        order = session_gdf['order'].iloc[0]
-        
-        # Fetch the historical fact (using the first row's dates)
-        first_row = session_gdf.iloc[0]
-        fact = get_historical_fact(
-            district_n, 
-            first_row['start_date'], 
-            first_row['end_date'], 
-            refresh_count
-        )
-        
-        # Generate the plot with the order
-        fig = plot_district(order, geometries, fact)
-        
+
+    # Get districts ordered by their session order
+    ordered_districts = district_dates.sort_values('order')['district_n'].tolist()
+
+    for district_n in ordered_districts:
+        with st.spinner(f"Loading District {district_n}..."):
+            # Load the shapefile for the current district
+            district_gdf = load_shapefile(district_n)
+
+        if district_gdf is None:
+            continue  # Skip to the next district if loading failed
+
+        # Fetch the mapping data for the current district
+        mapping_row = district_dates[district_dates['district_n'] == district_n].iloc[0]
+        order = mapping_row['order']
+        start_date = mapping_row['start_date']
+        end_date = mapping_row['end_date']
+
+        # Fetch the historical fact
+        fact = get_historical_fact(district_n, start_date, end_date, refresh_count)
+
+        # Generate the plot
+        fig = plot_district(order, district_gdf['geometry'].tolist(), fact)
+
         # Display the plot
         with placeholder.container():
             st.pyplot(fig)
-        
+
         plt.close(fig)  # Close the figure to free memory
+
+        # Wait for the specified interval before moving to the next slide
         time.sleep(interval)
-    
-    # The following code seems redundant and references a 'current_slide' that isn't initialized
-    # It's best to remove or comment it out unless you have a mechanism to handle 'current_slide'
-    """
-    # Display the current slide
-    current_district = unique_districts[st.session_state.current_slide]
-    district_gdf = merged_gdf[merged_gdf['district_n'] == current_district]
-    geometries = district_gdf['geometry'].tolist()
-    
-    # Fetch the historical fact (using the first row's dates)
-    first_row = district_gdf.iloc[0]
-    fact = get_historical_fact(current_district, first_row['start_date'], first_row['end_date'])
-    
-    # Generate the plot
-    fig = plot_district(current_district, geometries, fact)
-    
-    st.pyplot(fig)
-    plt.close(fig)  # Close the figure to free memory
-    
-    # Display slide number
-    st.write(f"Slide {st.session_state.current_slide + 1} of {len(unique_districts)}")
-    """
-
-
-
-
-    # # Display the current slide
-    # current_district = unique_districts[st.session_state.current_slide]
-    # district_gdf = merged_gdf[merged_gdf['district_n'] == current_district]
-    # geometries = district_gdf['geometry'].tolist()
-    
-    # # Fetch the historical fact (using the first row's dates)
-    # first_row = district_gdf.iloc[0]
-    # fact = get_historical_fact(current_district, first_row['start_date'], first_row['end_date'])
-    
-    # # Generate the plot
-    # fig = plot_district(current_district, geometries, fact)
-    
-    # st.pyplot(fig)
-    # plt.close(fig)  # Close the figure to free memory
-    
-    # # Display slide number
-    # st.write(f"Slide {st.session_state.current_slide + 1} of {len(unique_districts)}")
 
 # -------------- Main Function --------------
 
 def main():
-    # Initialize refresh_count in session state
+    # Apply custom styling
     set_custom_style()
+
+    # Initialize refresh_count in session state
     if 'refresh_count' not in st.session_state:
         st.session_state.refresh_count = 0
 
-    # Load and combine shapefiles
-    with st.spinner("📦 Loading and combining shapefiles..."):
-        combined_gdf = load_and_combine_shapefiles()
-    
-    if combined_gdf is None:
-        st.stop()
-    
     # Create mapping dataframe
     district_dates = create_mapping_dataframe()
-    
-    # Merge data
-    merged_gdf = merge_data(combined_gdf, district_dates)
+    district_dates = process_date_ranges(district_dates)
+
+    # UI Elements
     st.markdown(
-    """
-    <div style="font-size:16px; color:#4CAF50; font-weight: bold;">
-        Slow Down Animation 
-    </div>
-    """,
-    unsafe_allow_html=True
+        """
+        <div style="font-size:16px; color:#4CAF50; font-weight: bold;">
+            Slow Down Animation 
+        </div>
+        """,
+        unsafe_allow_html=True
     )
-    # Choose slideshow type (currently automatic)
-    interval = st.slider("", min_value=1, max_value=10, value=1)
+
+    # Slider to set slideshow interval
+    interval = st.slider("Set Slideshow Interval (seconds)", min_value=1, max_value=10, value=3)
+
+    # Button to rerun animation and refresh historical facts
     if st.button("🔄 Rerun Animation"):
         st.session_state.refresh_count += 1
+        st.experimental_rerun()  # Rerun the app to restart the slideshow
+
     # Display the automatic slideshow with current refresh_count
-    display_slideshow_auto(merged_gdf, interval, refresh_count=st.session_state.refresh_count)
-    
-    # Add the Refresh button below the slideshow
+    display_slideshow_auto(district_dates, interval, refresh_count=st.session_state.refresh_count)
 
-    
     # Optionally, provide a download option for historical facts
-    # This could involve downloading a CSV or similar
-
-
-    
-    # Optionally, provide a download option for historical facts
-    # This could involve downloading a CSV or similar
+    # (Implementation depends on how facts are stored; omitted for brevity)
 
 if __name__ == "__main__":
     main()
