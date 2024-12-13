@@ -245,8 +245,7 @@ def main():
     set_custom_style()
 
     # Initialize refresh_count in session state
-    if 'refresh_count' not in st.session_state:
-        st.session_state.refresh_count = 0
+
 
     # Create mapping dataframe
     district_dates = create_mapping_dataframe()
@@ -267,11 +266,10 @@ def main():
     interval = st.slider("", min_value=0, max_value=10, value=0)
 
     # Display the automatic slideshow with current refresh_count
-    display_slideshow_auto(district_dates, interval, refresh_count=st.session_state.refresh_count)
+    display_slideshow_auto(district_dates, interval)
 
     # Button to rerun animation and refresh historical facts
     if st.button("🔄 Rerun Animation"):
-        st.session_state.refresh_count += 1
         st.experimental_rerun()  # Rerun the app to restart the slideshow
     # Optionally, provide a download option for historical facts
     # (Implementation depends on how facts are stored; omitted for brevity)
