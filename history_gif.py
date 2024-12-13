@@ -156,7 +156,7 @@ def get_historical_fact(district_n, start_date, end_date):
 
 # -------------- Plotting Function --------------
 
-def plot_district(order, geometries, fact):
+def plot_district(order, geometries, fact, dates):
     """
     Generates a Matplotlib figure for the given congressional session with all its geometries.
 
@@ -185,7 +185,7 @@ def plot_district(order, geometries, fact):
     geometries.plot(ax=ax, color='skyblue', edgecolor='black')
 
     # Set the title and remove axes
-    ax.set_title(f"{order} Congressional Session", fontsize=16)
+    ax.set_title(f"{order} Congressional Session ({dates})", fontsize=16)
     ax.axis('off')
 
     # Add the historical fact as text at the bottom
@@ -231,7 +231,7 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
                 fact = get_historical_fact(district_n, start_date, end_date, refresh_count)
 
                 # Generate the plot
-                fig = plot_district(order, district_gdf['geometry'].tolist(), fact)
+                fig = plot_district(order, district_gdf['geometry'].tolist(), fact,district_dates)
 
                 # Display the plot
                 container.pyplot(fig)
