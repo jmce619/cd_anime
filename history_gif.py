@@ -32,7 +32,7 @@ st.set_page_config(page_title="Districts Slideshow", layout="wide")
 
 
 # Initialize OpenAI client
-openai.api_key = st.secrets.openai.api_key
+openai.api_key =st.secrets.openai.api_key
 def load_shapefile(district_n, parent_dir='./early_shapefiles'):
     """
     Load a single shapefile for the specified district number.
@@ -156,10 +156,10 @@ def get_historical_fact(district_n, start_date, end_date):
 
 # -------------- Plotting Function --------------
 
-def plot_district(order, geometries, fact, dates):
+def plot_district(order, geometries, fact, date_range):
     """
     Generates a Matplotlib figure for the given congressional session with all its geometries.
-
+    
     Parameters:
     - order (str): The order of the congressional session (e.g., "1st").
     - geometries (list): A list of geometries (Polygons or MultiPolygons) for the session.
@@ -185,7 +185,9 @@ def plot_district(order, geometries, fact, dates):
     geometries.plot(ax=ax, color='skyblue', edgecolor='black')
 
     # Set the title and remove axes
-    ax.set_title(f"{order} Congressional Session ({dates})", fontsize=16)
+    ax.set_title(f"{order} Congressional Session \n{{date_range}}", 
+             fontsize=15, fontweight='bold')
+
     ax.axis('off')
 
     # Add the historical fact as text at the bottom
@@ -224,7 +226,7 @@ def display_slideshow_auto(district_dates, interval=0):
 
                 # Fetch the historical fact
                 fact = get_historical_fact(district_n, start_date, end_date)
-                date_range = f"{mapping_row['start_date']}-{mapping_row['end_date']}"
+                date_range = f"{mapping_row['start_date'].strftime('%B %d, %Y')} - {mapping_row['end_date'].strftime('%B %d, %Y')}"
                 # Generate the plot
                 fig = plot_district(order, district_gdf['geometry'].tolist(), fact,date_range)
 
