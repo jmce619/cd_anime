@@ -224,9 +224,9 @@ def display_slideshow_auto(district_dates, interval=0):
 
                 # Fetch the historical fact
                 fact = get_historical_fact(district_n, start_date, end_date)
-
+                date_range = f"{mapping_row['start_date']}-{mapping_row['end_date']}"
                 # Generate the plot
-                fig = plot_district(order, district_gdf['geometry'].tolist(), fact,f"{mapping_row['start_date']}-{mapping_row['end_date']}")
+                fig = plot_district(order, district_gdf['geometry'].tolist(), fact,date_range)
 
                 # Display the plot
                 container.pyplot(fig)
