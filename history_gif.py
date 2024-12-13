@@ -134,26 +134,14 @@ def process_date_ranges(district_dates):
 # -------------- Historical Facts Caching Function --------------
 
 @st.cache_data
-def get_historical_fact(district_n, start_date, end_date, refresh_count):
-    """
-    Fetches an interesting historical fact for the given district's date range.
-    Caches the result to minimize API calls unless a refresh is triggered.
+def get_historical_fact(district_n, start_date, end_date):
 
-    Parameters:
-    - district_n (str): The three-digit district number.
-    - start_date (Timestamp): The start date of the congressional session.
-    - end_date (Timestamp): The end date of the congressional session.
-    - refresh_count (int): A counter to manage cache invalidation.
-
-    Returns:
-    - fact (str): The fetched historical fact.
-    """
     date_str = f"{start_date.strftime('%B %d, %Y')} to {end_date.strftime('%B %d, %Y')}"
     try:
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that responds with an interesting fact. The statement should not be framed as an answer to a question, but rather as a historical fact."},
+                {"role": "system", "content": "You are a helpful assistant that responds with an interesting fact. The statement should not be framed as an answer to a question, but rather as a historical fact. Start differently each time"},
                 {"role": "user", "content": f"State an interesting or exciting historical fact about the United States that occurred between {date_str}."}
             ],
             temperature=0.7
