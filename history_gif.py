@@ -228,7 +228,7 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
                 end_date = mapping_row['end_date']
 
                 # Fetch the historical fact
-                fact = get_historical_fact(district_n, start_date, end_date, refresh_count)
+                fact = get_historical_fact(district_n, start_date, end_date)
 
                 # Generate the plot
                 fig = plot_district(order, district_gdf['geometry'].tolist(), fact,district_dates)
