@@ -32,7 +32,7 @@ st.set_page_config(page_title="Districts Slideshow", layout="wide")
 
 
 # Initialize OpenAI client
-openai.api_key =st.secrets.openai.api_key
+openai.api_key = st.secrets.openai.api_key
 def load_shapefile(district_n, parent_dir='./early_shapefiles'):
     """
     Load a single shapefile for the specified district number.
@@ -141,7 +141,7 @@ def get_historical_fact(district_n, start_date, end_date):
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that responds with an interesting fact. The statement should not be framed as an answer to a question, but rather as a historical fact. Start differently each time"},
+                {"role": "system", "content": "You are a helpful assistant that responds with an interesting historical fact."},
                 {"role": "user", "content": f"State an interesting or exciting historical fact about the United States that occurred between {date_str}."}
             ],
             temperature=0.7
@@ -185,7 +185,7 @@ def plot_district(order, geometries, fact, date_range):
     geometries.plot(ax=ax, color='skyblue', edgecolor='black')
 
     # Set the title and remove axes
-    ax.set_title(f"{order} Congressional Session \n{{date_range}}", 
+    ax.set_title(f"{order} Congressional Session \n{date_range}", 
              fontsize=15, fontweight='bold')
 
     ax.axis('off')
