@@ -153,8 +153,8 @@ def get_historical_fact(district_n, start_date, end_date, refresh_count):
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant that responds with a factual statement. The statement should not be framed as an answer to a question, but rather as a straightforward historical fact."},
-                {"role": "user", "content": f"State an interesting historical fact about the United States that occurred between {date_str}."}
+                {"role": "system", "content": "You are a helpful assistant that responds with an interesting fact. The statement should not be framed as an answer to a question, but rather as a historical fact."},
+                {"role": "user", "content": f"State an interesting or exciting historical fact about the United States that occurred between {date_str}."}
             ],
             temperature=0.7
         )  
