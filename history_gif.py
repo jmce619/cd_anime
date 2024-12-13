@@ -153,12 +153,12 @@ def get_historical_fact(district_n, start_date, end_date, refresh_count):
         response = openai.ChatCompletion.create(
             model="gpt-4",
             messages=[
-                {"role": "system", "content": "You are a helpful assistant."},
-                {"role": "user", "content": f"Provide an interesting historical fact about the United States that happened between {date_str}."}
+                {"role": "system", "content": "You are a helpful assistant that responds with a factual statement. The statement should not be framed as an answer to a question, but rather as a straightforward historical fact."},
+                {"role": "user", "content": f"State an interesting historical fact about the United States that occurred between {date_str}."}
             ],
             temperature=0.7
-            
-        )
+        )  
+        
         fact = response.choices[0].message.content.strip()
     except Exception as e:
         fact = "Historical fact not available."
