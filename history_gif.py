@@ -195,14 +195,9 @@ def plot_district(order, geometries, fact, dates):
 
 # -------------- Slideshow Display Function --------------
 
-def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
+def display_slideshow_auto(district_dates, interval=0):
     """
-    Displays a slideshow of congressional sessions with automatic transitions.
-
-    Parameters:
-    - district_dates (DataFrame): The mapping DataFrame containing session data.
-    - interval (int): Time in seconds each session is displayed.
-    - refresh_count (int): Counter to control caching of historical facts.
+  
     """
     placeholder = st.empty()
 
@@ -231,7 +226,7 @@ def display_slideshow_auto(district_dates, interval=0, refresh_count=0):
                 fact = get_historical_fact(district_n, start_date, end_date)
 
                 # Generate the plot
-                fig = plot_district(order, district_gdf['geometry'].tolist(), fact,district_dates)
+                fig = plot_district(order, district_gdf['geometry'].tolist(), fact,f"{mapping_row['start_date']}-{mapping_row['end_date']}")
 
                 # Display the plot
                 container.pyplot(fig)
